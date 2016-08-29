@@ -4,35 +4,27 @@
 using namespace std;
 
 StringHash::StringHash() :
-    mCurrentBucketsSize(InitialBucketsSize),
+	mCurrentBucketsSize(InitialBucketsSize),
+	mCount(0),
     mBuckets(nullptr)
 {
-    mBuckets = new Node*[mCurrentBucketsSize];
+    mBuckets = new Node[mCurrentBucketsSize];
     for (int i = 0; i < mCurrentBucketsSize; ++i)
     {
-        mBuckets[i] = nullptr;
+		mBuckets[i].initialized = false;
     }
 }
 
 StringHash::StringHash(const StringHash& other) :
     mCurrentBucketsSize(0),
+	mCount(other.mCount),
     mBuckets(nullptr)
 {
     mCurrentBucketsSize = other.mCurrentBucketsSize;
-    mBuckets = new Node*[mCurrentBucketsSize];
+    mBuckets = new Node[mCurrentBucketsSize];
     for (int i = 0; i < mCurrentBucketsSize; ++i)
     {
-        mBuckets[i] = nullptr;
-
-        Node* n = other.mBuckets[i];
-        while (n != nullptr)
-        {
-            Node* temp = new Node();
-            temp->hash = n->hash;
-            temp->value = n->value;
-            temp->next = mBuckets[i];
-            mBuckets[i] = temp;
-        }
+		mBuckets[i] = other.mBuckets[i];
     }
 }
 
@@ -42,29 +34,18 @@ StringHash::StringHash(StringHash&& other)
     other.mBuckets = nullptr;
     mCurrentBucketsSize = other.mCurrentBucketsSize;
     other.mCurrentBucketsSize = 0;
+	mCount = other.mCount;
+	other.mCount = 0;
 }
 
 StringHash& StringHash::operator=(const StringHash& other)
 {
     mCurrentBucketsSize = other.mCurrentBucketsSize;
-    mBuckets = new Node*[mCurrentBucketsSize];
+    mBuckets = new Node[mCurrentBucketsSize];
+	mCount = other.mCount;
     for (int i = 0; i < mCurrentBucketsSize; ++i)
     {
-        if (mBuckets[i] != nullptr)
-        {
-            delete mBuckets[i];
-            mBuckets[i] = nullptr;
-        }
-
-        Node* n = other.mBuckets[i];
-        while (n != nullptr)
-        {
-            Node* temp = new Node();
-            temp->hash = n->hash;
-            temp->value = n->value;
-            temp->next = mBuckets[i];
-            mBuckets[i] = temp;
-        }
+		mBuckets[i] = other.mBuckets[i];
     }
 
     return *this;
@@ -76,25 +57,18 @@ StringHash& StringHash::operator=(StringHash&& other)
     other.mBuckets = nullptr;
     mCurrentBucketsSize = other.mCurrentBucketsSize;
     other.mCurrentBucketsSize = 0;
+	mCount = other.mCount;
+	other.mCount = 0;
 
     return *this;
 }
 
 StringHash::~StringHash()
 {
-    for (int i = 0; i < mCurrentBucketsSize; ++i)
-    {
-        Node* n = mBuckets[i];
-        while (n != nullptr)
-        {
-            Node* next = n->next;
-            delete n;
-            n = next;
-        }
-    }
+	delete[] mBuckets;
 }
 
-unsigned int StringHash::StringToHash(string value)
+unsigned int StringHash::StringToHash(string& value)
 {
     unsigned int hash = fnv32Offset;
 
@@ -107,7 +81,7 @@ unsigned int StringHash::StringToHash(string value)
     return hash;
 }
 
-unsigned int StringHash::ArrayToHash(char* buffer, int len)
+unsigned int StringHash::ArrayToHash(const char* buffer, int len)
 {
     unsigned int hash = fnv32Offset;
 
@@ -122,32 +96,27 @@ unsigned int StringHash::ArrayToHash(char* buffer, int len)
 
 void StringHash::Resize()
 {
-    Node** currArray = mBuckets;
-    int newLength = mCurrentBucketsSize * 2;
-    Node** newArray = new Node*[newLength];
-    for (int i = 0; i < newLength; ++i)
-    {
-        newArray[i] = nullptr;
-    }
+	int newBucketsSize = mCurrentBucketsSize * 2;
+	Node* newData = new Node[newBucketsSize];
+	for (int i = 0; i < newBucketsSize; ++i)
+	{
+		newData[i].initialized = false;
+	}
 
-    for (int i = 0; i < mCurrentBucketsSize; ++i)
-    {
-        Node* n = currArray[i];
-        while (n != nullptr)
-        {
-            int pos = n->hash % newLength;
-            Node* curr = newArray[pos];
-            newArray[pos] = new Node();
-            newArray[pos]->hash = n->hash;
-            newArray[pos]->value = n->value;
-            newArray[pos]->next = curr;
+	int newCount = 0;
+	for(int i = 0; i < mCurrentBucketsSize; ++i)
+	{
+		if (mBuckets[i].initialized)
+		{
+			AddInternal(newData, newBucketsSize, mBuckets[i].value, mBuckets[i].hash, newCount);
+		}
+	}
 
-            n = n->next;
-        }
-    }
+	Node* currArray = mBuckets;
+	mBuckets = newData;
+	mCurrentBucketsSize = newBucketsSize;
+	mCount = newCount;
 
-    mBuckets = newArray;
-    mCurrentBucketsSize = newLength;
     delete[] currArray;
 }
 
@@ -169,7 +138,7 @@ bool StringHash::Equal(string& value, string& item)
     return true;
 }
 
-bool StringHash::Equal(string& value, char* buffer, int count)
+bool StringHash::Equal(string& value, const char* buffer, int count)
 {
     if (value.size() != count)
     {
@@ -191,123 +160,131 @@ void StringHash::AddRange(StringHash& hash)
 {
     for (int i = 0; i < hash.mCurrentBucketsSize; ++i)
     {
-        Node* n = hash.mBuckets[i];
-        while (n != nullptr)
+		if(hash.mBuckets[i].initialized)
         {
-            Add(n->value);
-
-            n = n->next;
+			string temp = hash.mBuckets[i].value;
+            Add(temp);
         }
     }
 }
 
-bool StringHash::Add(string item)
+
+bool StringHash::AddInternal(Node* data, int dataCount, const char *item, int itemLen, unsigned int hash, int& count)
 {
-    int hash = abs((int)StringToHash(item));
-    int pos = hash % mCurrentBucketsSize;
-    Node* curr = mBuckets[pos];
-    if (curr == nullptr)
-    {
-        curr = new Node();
-        curr->hash = hash;
-        curr->value = item;
-        curr->next = nullptr;
+	int pos = abs((int)(hash % dataCount));
+	while (true)
+	{
+		if (pos >= dataCount)
+		{
+			pos = 0;
+		}
 
-        mBuckets[pos] = curr;
-        return true;
-    }
-    else
-    {
-        int collisions = 0;
-        Node* prev = curr;
-        while (curr != nullptr)
-        {
-            ++collisions;
+		if (!data[pos].initialized)
+		{
+			string str(itemLen, 0);
+			for (int i = 0; i < itemLen; ++i)
+			{
+				str[i] = item[i];
+			}
 
-            if (curr->hash == hash && Equal(item, curr->value))
-            {
-                // Found our string
-                return false;
-            }
+			data[pos].initialized = true;
+			data[pos].hash = hash;
+			data[pos].value = move(str);
+			count++;
+			return true;
+		}
 
-            prev = curr;
-            curr = curr->next;
-        }
+		if (data[pos].hash == hash && Equal(data[pos].value, item, itemLen))
+		{
+			return false;
+		}
 
-        if (collisions >= MaxCollisions)
-        {
-            Resize();
-
-            int newHash = abs((int)StringToHash(item));
-            int newPos = hash % mCurrentBucketsSize;
-            Node* temp = mBuckets[pos];
-            mBuckets[pos] = new Node();
-            mBuckets[pos]->hash = hash;
-            mBuckets[pos]->value = item;
-            mBuckets[pos]->next = temp;
-        }
-        else
-        {
-            prev->next = new Node();
-            prev->next->hash = hash;
-            prev->next->value = item;
-            prev->next->next = nullptr;
-        }
-
-        return true;
-    }
+		++pos;
+	}
 }
 
-bool StringHash::Contains(string item)
+bool StringHash::AddInternal(Node* data, int dataCount, string& item, unsigned int hash, int& count)
 {
-    int hash = abs((int)StringToHash(item));
-    int pos = hash % mCurrentBucketsSize;
-    Node* curr = mBuckets[pos];
-    while (curr != nullptr)
-    {
-        if (curr->hash == hash && Equal(curr->value, item))
-        {
-            return true;
-        }
+	int pos = abs((int)(hash % dataCount));
+	while (true)
+	{
+		if (pos >= dataCount)
+		{
+			pos = 0;
+		}
 
-        curr = curr->next;
-    }
+		if (!data[pos].initialized)
+		{
+			data[pos].initialized = true;
+			data[pos].hash = hash;
+			data[pos].value = move(item);
+			count++;
+			return true;
+		}
 
-    return false;
+		if (data[pos].hash == hash && Equal(data[pos].value, item))
+		{
+			return false;
+		}
+
+		++pos;
+	}
 }
 
-bool StringHash::Contains(char* buffer, int count)
+bool StringHash::Add(const char *buffer, int count)
 {
-    int hash = abs((int)ArrayToHash(buffer, count));
-    int pos = hash % mCurrentBucketsSize;
-    Node* curr = mBuckets[pos];
-    while (curr != nullptr)
-    {
-        if (curr->hash == hash && Equal(curr->value, buffer, count))
-        {
-            return true;
-        }
+	if (((double)mCount / (double)mCurrentBucketsSize) >= 0.33)
+	{
+		Resize();
+	}
 
-        curr = curr->next;
-    }
+	return AddInternal(mBuckets, mCurrentBucketsSize, buffer, count, ArrayToHash(buffer, count), mCount);
+}
 
-    return false;
+bool StringHash::Add(string& item)
+{
+	if (((double)mCount / (double)mCurrentBucketsSize) >= 0.33)
+	{
+		Resize();
+	}
+
+	return AddInternal(mBuckets, mCurrentBucketsSize, item, StringToHash(item), mCount);
+}
+
+bool StringHash::Contains(string& item)
+{
+	return Contains(item.c_str(), item.size());
+}
+
+bool StringHash::Contains(const char* buffer, int count)
+{
+	unsigned int hash = ArrayToHash(buffer, count);
+	int pos = abs((int)(hash % mCurrentBucketsSize));
+
+	while (true)
+	{
+		if (pos >= mCurrentBucketsSize)
+		{
+			pos = 0;
+		}
+
+		if (mBuckets[pos].hash == hash && Equal(mBuckets[pos].value, buffer, count))
+		{
+			return true;
+		}
+
+		if (!(mBuckets[pos].initialized))
+		{
+			return false;
+		}
+
+		++pos;
+	}
 }
 
 int StringHash::Count()
 {
-    int count = 0;
-    for (int i = 0; i < mCurrentBucketsSize; ++i)
-    {
-        Node* n = mBuckets[i];
-        while (n != nullptr)
-        {
-            ++count;
-            n = n->next;
-        }
-    }
-
-    return count;
+    return mCount;
 }
 
 vector<string> StringHash::GetList()
@@ -316,12 +293,10 @@ vector<string> StringHash::GetList()
 
     for (int i = 0; i < mCurrentBucketsSize; ++i)
     {
-        Node* n = mBuckets[i];
-        while (n != nullptr)
-        {
-            items.push_back(n->value);
-            n = n->next;
-        }
+		if (mBuckets[i].initialized)
+		{
+			items.push_back(mBuckets[i].value);
+		}
     }
 
     return items;

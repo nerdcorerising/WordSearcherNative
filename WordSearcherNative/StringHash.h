@@ -6,28 +6,32 @@
 class Node
 {
 public:
-    int hash;
+	bool initialized;
+    unsigned int hash;
     std::string value;
-    Node* next;
 };
 
 class StringHash
 {
 private:
-    const int InitialBucketsSize = 100;
-    const int MaxCollisions = 10;
+    static const int InitialBucketsSize = 100;
+    static const int MaxCollisions = 10;
 
-    const unsigned int fnv32Offset = 2166136261u;
-    const unsigned int fnv32Prime = 16777619u;
+    static const unsigned int fnv32Offset = 2166136261u;
+    static const unsigned int fnv32Prime = 16777619u;
 
     int mCurrentBucketsSize;
-    Node** mBuckets;
+	int mCount;
+    Node* mBuckets;
 
-    unsigned int StringToHash(std::string value);
-    unsigned int ArrayToHash(char* buffer, int len);
+    static unsigned int StringToHash(std::string& value);
+    static unsigned int ArrayToHash(const char* buffer, int len);
     void Resize();
-    bool Equal(std::string& value, std::string& item);
-    bool Equal(std::string& value, char* buffer, int count);
+    static bool Equal(std::string& value, std::string& item);
+    static bool Equal(std::string& value, const char* buffer, int count);
+
+	static bool AddInternal(Node* data, int dataCount, std::string& item, unsigned int hash, int& count);
+	static bool AddInternal(Node* data, int dataCount, const char *item, int len, unsigned int hash, int& count);
 
 public:
     StringHash();
@@ -37,10 +41,11 @@ public:
     StringHash& operator=(StringHash&& other);
     ~StringHash();
 
-    bool Add(std::string item);
+    bool Add(std::string& item);
+	bool Add(const char *buffer, int count);
     void AddRange(StringHash& hash);
-    bool Contains(std::string item);
-    bool Contains(char* buffer, int count);
+    bool Contains(std::string& item);
+    bool Contains(const char* buffer, int count);
     int Count();
     std::vector<std::string> GetList();
 };

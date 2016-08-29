@@ -6,7 +6,7 @@
 #include <sstream>
 #include <vector>
 #include <thread>
-#include <time.h>
+#include <Windows.h>
 
 #include "stdafx.h"
 #include "Trie.h"
@@ -37,11 +37,10 @@ void FindUpperRightWords(CharTrie* englishWords, char* wordSearch, int rowCount,
 void FindUpperWords(CharTrie* englishWords, char* wordSearch, int rowCount, int colCount, StringHash* words, char* buffer, int currentRow, int currentCol);
 void FindUpperLeftWords(CharTrie* englishWords, char* wordSearch, int rowCount, int colCount, StringHash* words, char* buffer, int currentRow, int currentCol);
 void GenerateRandomChars(int width, int height);
-string BufferToCandidate(char* buffer, int len);
 
 int main()
 {
-    time_t startTime = time(NULL);
+    DWORD startTime = GetTickCount();
 
     CharTrie *englishWords = new CharTrie();
     LoadWordList(*englishWords);
@@ -55,7 +54,7 @@ int main()
     }
 
     StringHash words;
-    time_t algStartTime = time(NULL);
+	DWORD algStartTime = GetTickCount();
 
     vector<Result> results;
 
@@ -110,21 +109,23 @@ int main()
         result.t->join();
     }
 
-    time_t algEndTime = time(NULL);
+    DWORD algEndTime = GetTickCount();
+
     for (size_t i = 0; i < results.size(); ++i)
     {
-        Result result = results[i];
-        words.AddRange(*(result.words));
+		printf("words.count + results.words.count = %d\r\n", words.Count() + results[i].words->Count());
+        words.AddRange(*(results[i].words));
+		printf("After adding words, count = %d\r\n", words.Count());
 
-        delete result.t;
-        delete result.words;
+        delete results[i].t;
+        delete results[i].words;
     }
 
-    time_t endTime = time(NULL);
+    DWORD endTime = GetTickCount();
 
     printf("%d words\r\n", words.Count());
-    printf("Core search done in %f seconds\r\n", difftime(algEndTime, algStartTime));
-    printf("Whole process took %f seconds\r\n", difftime(endTime, startTime));
+    printf("Core search done in %f seconds\r\n", ((double)algEndTime - (double)algStartTime) / 1000);
+    printf("Whole process took %f seconds\r\n", ((double)endTime - (double)startTime) / 1000);
 
     delete[] wordSearch;
     delete englishWords;
@@ -248,7 +249,6 @@ void FindLowerRightWords(CharTrie* englishWords, char* wordSearch, int rowCount,
     int row = currentRow;
     int col = currentCol;
     CharTrie* ct = englishWords;
-    string candidate;
     while (row < rowCount && col < colCount)
     {
         buffer[curPos] = wordSearch[(row * colCount) + col];
@@ -264,8 +264,7 @@ void FindLowerRightWords(CharTrie* englishWords, char* wordSearch, int rowCount,
         {
             if (!words->Contains(buffer, curPos))
             {
-                candidate = BufferToCandidate(buffer, curPos);
-                words->Add(candidate);
+				words->Add(buffer, curPos);
             }
         }
 
@@ -280,7 +279,6 @@ void FindLowerWords(CharTrie* englishWords, char* wordSearch, int rowCount, int 
     int row = currentRow;
     int col = currentCol;
     CharTrie* ct = englishWords;
-    string candidate;
     while (row < rowCount)
     {
         buffer[curPos] = wordSearch[(row * colCount) + col];
@@ -296,8 +294,7 @@ void FindLowerWords(CharTrie* englishWords, char* wordSearch, int rowCount, int 
         {
             if (!words->Contains(buffer, curPos))
             {
-                candidate = BufferToCandidate(buffer, curPos);
-                words->Add(candidate);
+				words->Add(buffer, curPos);
             }
         }
 
@@ -311,7 +308,6 @@ void FindLowerLeftWords(CharTrie* englishWords, char* wordSearch, int rowCount, 
     int row = currentRow;
     int col = currentCol;
     CharTrie* ct = englishWords;
-    string candidate;
     while (row < rowCount && col >= 0)
     {
         buffer[curPos] = wordSearch[(row * colCount) + col];
@@ -327,8 +323,7 @@ void FindLowerLeftWords(CharTrie* englishWords, char* wordSearch, int rowCount, 
         {
             if (!words->Contains(buffer, curPos))
             {
-                candidate = BufferToCandidate(buffer, curPos);
-                words->Add(candidate);
+				words->Add(buffer, curPos);
             }
         }
 
@@ -343,7 +338,6 @@ void FindRightWords(CharTrie* englishWords, char* wordSearch, int rowCount, int 
     int row = currentRow;
     int col = currentCol;
     CharTrie* ct = englishWords;
-    string candidate;
     while (col < colCount)
     {
         buffer[curPos] = wordSearch[(row * colCount) + col];
@@ -359,8 +353,7 @@ void FindRightWords(CharTrie* englishWords, char* wordSearch, int rowCount, int 
         {
             if (!words->Contains(buffer, curPos))
             {
-                candidate = BufferToCandidate(buffer, curPos);
-                words->Add(candidate);
+				words->Add(buffer, curPos);
             }
         }
 
@@ -374,7 +367,6 @@ void FindLeftWords(CharTrie* englishWords, char* wordSearch, int rowCount, int c
     int row = currentRow;
     int col = currentCol;
     CharTrie* ct = englishWords;
-    string candidate;
     while (col >= 0)
     {
         buffer[curPos] = wordSearch[(row * colCount) + col];
@@ -390,8 +382,7 @@ void FindLeftWords(CharTrie* englishWords, char* wordSearch, int rowCount, int c
         {
             if (!words->Contains(buffer, curPos))
             {
-                candidate = BufferToCandidate(buffer, curPos);
-                words->Add(candidate);
+				words->Add(buffer, curPos);
             }
         }
 
@@ -405,7 +396,6 @@ void FindUpperRightWords(CharTrie* englishWords, char* wordSearch, int rowCount,
     int row = currentRow;
     int col = currentCol;
     CharTrie* ct = englishWords;
-    string candidate;
     while (row >= 0 && col < colCount)
     {
         buffer[curPos] = wordSearch[(row * colCount) + col];
@@ -421,8 +411,7 @@ void FindUpperRightWords(CharTrie* englishWords, char* wordSearch, int rowCount,
         {
             if (!words->Contains(buffer, curPos))
             {
-                candidate = BufferToCandidate(buffer, curPos);
-                words->Add(candidate);
+				words->Add(buffer, curPos);
             }
         }
 
@@ -437,7 +426,6 @@ void FindUpperWords(CharTrie* englishWords, char* wordSearch, int rowCount, int 
     int row = currentRow;
     int col = currentCol;
     CharTrie* ct = englishWords;
-    string candidate;
     while (row >= 0)
     {
         buffer[curPos] = wordSearch[(row * colCount) + col];
@@ -453,8 +441,7 @@ void FindUpperWords(CharTrie* englishWords, char* wordSearch, int rowCount, int 
         {
             if (!words->Contains(buffer, curPos))
             {
-                candidate = BufferToCandidate(buffer, curPos);
-                words->Add(candidate);
+                words->Add(buffer, curPos);
             }
         }
 
@@ -468,7 +455,6 @@ void FindUpperLeftWords(CharTrie* englishWords, char* wordSearch, int rowCount, 
     int row = currentRow;
     int col = currentCol;
     CharTrie* ct = englishWords;
-    string candidate;
     while (row >= 0 && col >= 0)
     {
         buffer[curPos] = wordSearch[(row * colCount) + col];
@@ -484,8 +470,7 @@ void FindUpperLeftWords(CharTrie* englishWords, char* wordSearch, int rowCount, 
         {
             if (!words->Contains(buffer, curPos))
             {
-                candidate = BufferToCandidate(buffer, curPos);
-                words->Add(candidate);
+				words->Add(buffer, curPos);
             }
         }
 
@@ -494,13 +479,3 @@ void FindUpperLeftWords(CharTrie* englishWords, char* wordSearch, int rowCount, 
     }
 }
 
-string BufferToCandidate(char* buffer, int len)
-{
-    string str(len, 0);
-    for (int i = 0; i < len; ++i)
-    {
-        str[i] = buffer[i];
-    }
-
-    return str;
-}
