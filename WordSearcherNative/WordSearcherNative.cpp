@@ -36,7 +36,7 @@ void FindLeftWords(CharTrie* englishWords, char* wordSearch, int rowCount, int c
 void FindUpperRightWords(CharTrie* englishWords, char* wordSearch, int rowCount, int colCount, StringHash* words, char* buffer, int currentRow, int currentCol);
 void FindUpperWords(CharTrie* englishWords, char* wordSearch, int rowCount, int colCount, StringHash* words, char* buffer, int currentRow, int currentCol);
 void FindUpperLeftWords(CharTrie* englishWords, char* wordSearch, int rowCount, int colCount, StringHash* words, char* buffer, int currentRow, int currentCol);
-void GenerateRandomChars(int width, int height);
+string GetStringFromBuffer(const char *buffer, int len);
 
 int main()
 {
@@ -154,6 +154,17 @@ void LoadWordList(CharTrie& englishWords)
     }
  }
 
+string GetStringFromBuffer(const char *buffer, int len)
+{
+	string str(len, 0);
+	for (int i = 0; i < len; ++i)
+	{
+		str[i] = buffer[i];
+	}
+
+	return str;
+}
+
 char* ReadFile(string fileName, int& rowCount, int& colCount)
 {
     char *wordSearch = nullptr;
@@ -262,9 +273,10 @@ void FindLowerRightWords(CharTrie* englishWords, char* wordSearch, int rowCount,
         ++curPos;
         if (ct->IsTerminator())
         {
-            if (!words->Contains(buffer, curPos))
+			string str = GetStringFromBuffer(buffer, curPos);
+            if (!words->Contains(str))
             {
-				words->Add(buffer, curPos);
+				words->Add(str);
             }
         }
 
@@ -292,10 +304,11 @@ void FindLowerWords(CharTrie* englishWords, char* wordSearch, int rowCount, int 
         ++curPos;
         if (ct->IsTerminator())
         {
-            if (!words->Contains(buffer, curPos))
-            {
-				words->Add(buffer, curPos);
-            }
+			string str = GetStringFromBuffer(buffer, curPos);
+			if (!words->Contains(str))
+			{
+				words->Add(str);
+			}
         }
 
         ++row;
@@ -321,10 +334,11 @@ void FindLowerLeftWords(CharTrie* englishWords, char* wordSearch, int rowCount, 
         ++curPos;
         if (ct->IsTerminator())
         {
-            if (!words->Contains(buffer, curPos))
-            {
-				words->Add(buffer, curPos);
-            }
+			string str = GetStringFromBuffer(buffer, curPos);
+			if (!words->Contains(str))
+			{
+				words->Add(str);
+			}
         }
 
         ++row;
@@ -351,10 +365,11 @@ void FindRightWords(CharTrie* englishWords, char* wordSearch, int rowCount, int 
         ++curPos;
         if (ct->IsTerminator())
         {
-            if (!words->Contains(buffer, curPos))
-            {
-				words->Add(buffer, curPos);
-            }
+			string str = GetStringFromBuffer(buffer, curPos);
+			if (!words->Contains(str))
+			{
+				words->Add(str);
+			}
         }
 
         ++col;
@@ -380,10 +395,11 @@ void FindLeftWords(CharTrie* englishWords, char* wordSearch, int rowCount, int c
         ++curPos;
         if (ct->IsTerminator())
         {
-            if (!words->Contains(buffer, curPos))
-            {
-				words->Add(buffer, curPos);
-            }
+			string str = GetStringFromBuffer(buffer, curPos);
+			if (!words->Contains(str))
+			{
+				words->Add(str);
+			}
         }
 
         --col;
@@ -409,10 +425,11 @@ void FindUpperRightWords(CharTrie* englishWords, char* wordSearch, int rowCount,
         ++curPos;
         if (ct->IsTerminator())
         {
-            if (!words->Contains(buffer, curPos))
-            {
-				words->Add(buffer, curPos);
-            }
+			string str = GetStringFromBuffer(buffer, curPos);
+			if (!words->Contains(str))
+			{
+				words->Add(str);
+			}
         }
 
         --row;
@@ -439,10 +456,11 @@ void FindUpperWords(CharTrie* englishWords, char* wordSearch, int rowCount, int 
         ++curPos;
         if (ct->IsTerminator())
         {
-            if (!words->Contains(buffer, curPos))
-            {
-                words->Add(buffer, curPos);
-            }
+			string str = GetStringFromBuffer(buffer, curPos);
+			if (!words->Contains(str))
+			{
+				words->Add(str);
+			}
         }
 
         --row;
@@ -468,10 +486,11 @@ void FindUpperLeftWords(CharTrie* englishWords, char* wordSearch, int rowCount, 
         ++curPos;
         if (ct->IsTerminator())
         {
-            if (!words->Contains(buffer, curPos))
-            {
-				words->Add(buffer, curPos);
-            }
+			string str = GetStringFromBuffer(buffer, curPos);
+			if (!words->Contains(str))
+			{
+				words->Add(str);
+			}
         }
 
         --row;

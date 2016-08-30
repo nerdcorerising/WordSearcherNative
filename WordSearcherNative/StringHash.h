@@ -1,52 +1,23 @@
 #pragma once
 
 #include <string>
-#include <vector>
+#include "FastHash.h"
 
-class Node
-{
-public:
-	bool initialized;
-    unsigned int hash;
-    std::string value;
-};
-
-class StringHash
+class StringHash : public FastHash<std::string>
 {
 private:
-    static const int InitialBucketsSize = 100;
-    static const int MaxCollisions = 10;
+	static const unsigned int fnv32Offset = 2166136261u;
+	static const unsigned int fnv32Prime = 16777619u;
 
-    static const unsigned int fnv32Offset = 2166136261u;
-    static const unsigned int fnv32Prime = 16777619u;
+	static unsigned int ArrayToHash(const char* buffer, int len);
 
-    int mCurrentBucketsSize;
-	int mCount;
-    Node* mBuckets;
+	static bool Equal(std::string& value, const char *item, int count);
 
-    static unsigned int StringToHash(std::string& value);
-    static unsigned int ArrayToHash(const char* buffer, int len);
-    void Resize();
-    static bool Equal(std::string& value, std::string& item);
-    static bool Equal(std::string& value, const char* buffer, int count);
-
-	static bool AddInternal(Node* data, int dataCount, std::string& item, unsigned int hash, int& count);
-	static bool AddInternal(Node* data, int dataCount, const char *item, int len, unsigned int hash, int& count);
+	virtual bool Equal(std::string& lhs, std::string& rhs);
+	virtual unsigned int Hash(std::string& item);
 
 public:
-    StringHash();
-    StringHash(const StringHash& other);
-    StringHash(StringHash&& other);
-    StringHash& operator=(const StringHash& other);
-    StringHash& operator=(StringHash&& other);
-    ~StringHash();
 
-    bool Add(std::string& item);
-	bool Add(const char *buffer, int count);
-    void AddRange(StringHash& hash);
-    bool Contains(std::string& item);
-    bool Contains(const char* buffer, int count);
-    int Count();
-    std::vector<std::string> GetList();
 };
+
 
